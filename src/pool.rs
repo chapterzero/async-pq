@@ -1,4 +1,5 @@
 use super::connection::{Connection, ConnectionError};
+use super::config::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -7,6 +8,7 @@ pub struct Pool {
 }
 
 struct Inner {
+    conf: PqConfig,
     // vector of free connection in pool
     conns: Mutex<Vec<Connection>>,
     // 0: total of connection allocated
@@ -16,17 +18,18 @@ struct Inner {
 }
 
 impl Pool {
-    pub fn new(max_conn: usize) -> Pool {
-        Pool {
+    pub fn new<C: ToPqConfig>(conf: C, max_conn: usize) -> Result<Pool, ConfParseError> {
+        Ok(Pool {
             inner: Arc::new(Inner {
+                conf: conf.to_pq_config()?,
                 conns: Mutex::new(Vec::with_capacity(max_conn)),
                 conn_allocated: Mutex::new((0, 0)),
                 max_conn,
             }),
-        }
+        })
     }
 
-    pub async fn get_conn(&mut self) -> Result<PooledConnection, ConnectionPoolError> {
+    pub async fn get_conn(&self) -> Result<PooledConnection, ConnectionPoolError> {
         let conn: Option<Connection> = {
             let mut conns = self.inner.conns.lock().unwrap();
             conns.pop()
@@ -54,13 +57,17 @@ impl Pool {
                 );
                 drop(allocated);
 
-                let conn = Connection::new(("127.0.0.1", 5378))
+                let conn = Connection::new(self.inner.conf.address)
                     .await
                     .map_err(|e| ConnectionPoolError::Connection(e))?;
 
                 let mut allocated = self.inner.conn_allocated.lock().unwrap();
                 allocated.0 += 1;
                 allocated.1 -= 1;
+                debug!(
+                    "Allocated new connection, total allocated: {}, pending: {}",
+                    allocated.0, allocated.1
+                );
 
                 Ok(PooledConnection {
                     pool: self.clone(),
@@ -72,6 +79,7 @@ impl Pool {
 
     pub fn put_back(&self, conn: Connection) {
         let mut vec = self.inner.conns.lock().unwrap();
+        debug!("#REMOVE total in pools: {}", vec.len());
         vec.push(conn);
     }
 }

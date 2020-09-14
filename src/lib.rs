@@ -7,5 +7,6 @@ pub mod pool;
 pub mod config;
 
 pub use client::Client;
+pub use pool::Pool;
 pub use connection::Connection;
 pub use config::PqConfig;
