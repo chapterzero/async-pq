@@ -14,9 +14,8 @@ pub struct PqConfig {
 }
 
 #[derive(Debug)]
-pub struct Credential {
-    pub user: String,
-    pub pass: Option<String>,
+pub enum Credential {
+    UserPass(String, Option<String>),
 }
 
 #[derive(Debug)]
@@ -73,10 +72,10 @@ impl ToPqConfig for &str {
         let cred = captures.get(1).map(|c| {
             let c = c.as_str();
             let mut split = c[..c.len() - 1].split(":");
-            Credential {
-                user: split.next().unwrap().to_string(),
-                pass: split.next().map(String::from),
-            }
+            Credential::UserPass( 
+                split.next().unwrap().to_string(),
+                split.next().map(String::from),
+            )
         });
         let dbname = captures.get(3).map(|c| String::from(&c.as_str()[1..]));
 
@@ -143,10 +142,13 @@ mod tests {
         let conf = "postgresql://user@localhost".to_pq_config().unwrap();
         assert_eq!("::1".parse::<Ipv6Addr>().unwrap(), conf.address.ip());
         assert_eq!(5432, conf.address.port());
-        assert!(conf.cred.is_some());
-        let cred = conf.cred.unwrap();
-        assert_eq!("user", cred.user);
-        assert!(cred.pass.is_none());
+        match conf.cred {
+            None => panic!("Should not be none"),
+            Some(Credential::UserPass(user, pass)) => {
+                assert_eq!("user", user);
+                assert!(pass.is_none());
+            }
+        }
         assert!(conf.dbname.is_none())
     }
 
@@ -155,24 +157,30 @@ mod tests {
         let conf = "postgresql://user:secret@localhost".to_pq_config().unwrap();
         assert_eq!("::1".parse::<Ipv6Addr>().unwrap(), conf.address.ip());
         assert_eq!(5432, conf.address.port());
-        assert!(conf.cred.is_some());
-        let cred = conf.cred.unwrap();
-        assert_eq!("user", cred.user);
-        assert_eq!("secret", cred.pass.unwrap());
+        match conf.cred {
+            None => panic!("Should not be none"),
+            Some(Credential::UserPass(user, pass)) => {
+                assert_eq!("user", user);
+                assert_eq!("secret", pass.unwrap());
+            }
+        }
         assert!(conf.dbname.is_none())
     }
 
     #[test]
     fn test_parse_complete() {
-        let conf = "postgresql://user:secret@33.3.1.1:3223/mydb"
+        let conf = "postgresql://user2:s3cret@33.3.1.1:3223/mydb"
             .to_pq_config()
             .unwrap();
         assert_eq!("33.3.1.1".parse::<Ipv4Addr>().unwrap(), conf.address.ip());
         assert_eq!(3223, conf.address.port());
-        assert!(conf.cred.is_some());
-        let cred = conf.cred.unwrap();
-        assert_eq!("user", cred.user);
-        assert_eq!("secret", cred.pass.unwrap());
+        match conf.cred {
+            None => panic!("Should not be none"),
+            Some(Credential::UserPass(user, pass)) => {
+                assert_eq!("user2", user);
+                assert_eq!("s3cret", pass.unwrap());
+            }
+        }
         assert_eq!("mydb", conf.dbname.unwrap());
     }
 }
