@@ -19,7 +19,7 @@ impl Client {
         let conn = {
             // self.pool.
         };
-        Ok(Connection::new(self.conf.address).await?)
+        Ok(Connection::new(&self.conf.address).await?)
     }
 }
 
