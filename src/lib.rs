@@ -5,6 +5,7 @@ pub mod client;
 pub mod connection;
 pub mod pool;
 pub mod config;
+pub mod protocols;
 
 pub use client::Client;
 pub use pool::Pool;

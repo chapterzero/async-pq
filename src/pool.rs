@@ -57,9 +57,13 @@ impl Pool {
                 );
                 drop(allocated);
 
-                let conn = Connection::new(self.inner.conf.address)
+                let mut conn = Connection::new(self.inner.conf.address)
                     .await
                     .map_err(|e| ConnectionPoolError::Connection(e))?;
+                conn.startup(self.inner.conf.cred.as_ref(), self.inner.conf.dbname.as_deref())
+                    .await
+                    .map_err(|e| ConnectionPoolError::Connection(e))?;
+;
 
                 let mut allocated = self.inner.conn_allocated.lock().unwrap();
                 allocated.0 += 1;
