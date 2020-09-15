@@ -1,5 +1,6 @@
 pub mod auth;
-pub mod message;
+pub mod serializer;
+pub mod deserializer;
 pub mod stream;
 
-pub use message::{to_message, to_message_with_len};
+pub use serializer::{to_message, to_message_with_len};

@@ -1,5 +1,4 @@
 use serde::Serialize;
-use std::ffi::{CString};
 
 pub enum AuthResponse {
     ErrorResponse,
@@ -21,13 +20,13 @@ pub enum IntermediateResponse {
 }
 
 const STARTUP_VERSION: u32 = 196608;
-static STARTUP_USER: &'static[u8] = b"user\0";
-static STARTUP_DBNAME: &'static[u8] = b"database\0";
+static STARTUP_USER: &'static [u8] = b"user\0";
+static STARTUP_DBNAME: &'static [u8] = b"database\0";
 
 #[derive(Serialize)]
 pub struct StartupMessage<'a> {
     ver: u32,
-    param: Vec<(&'static[u8], &'a str)>,
+    param: Vec<(&'static [u8], &'a str)>,
 }
 
 impl<'a> StartupMessage<'a> {
